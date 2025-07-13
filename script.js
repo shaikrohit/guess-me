@@ -136,19 +136,26 @@ async function submitScore() {
 }
 
 async function triggerScoreSubmission(username, score) {
-    return fetch(`https://api.github.com/repos/shaikrohit/guess-me/dispatches`, {
-        method: 'POST',
-        headers: {
-            'Accept': 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            event_type: 'submit_score',
-            client_payload: { username, score }
-        })
-    });
+    try {
+        const response = await fetch(`https://api.github.com/repos/shaikrohit/guess-me/issues`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: `${username} - ${score}`,
+                body: `Quiz score submission from ${username}`
+            })
+        });
+        
+        if (!response.ok) throw new Error(await response.text());
+        return response;
+    } catch (error) {
+        console.error('Submission failed:', error);
+        throw new Error('Failed to save score. Please try later.');
+    }
 }
-
 function showMessage(text, type) {
     submissionMessage.textContent = text;
     submissionMessage.className = type;
