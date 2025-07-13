@@ -1,17 +1,17 @@
 name: Submit Quiz Score
 on:
+  workflow_dispatch:  # Allows manual triggering
   repository_dispatch:
     types: [submit_score]
 
-# Critical permission for public_repo tokens
 permissions:
-  issues: write  # Only allows creating issues
+  issues: write  # Minimum required permission
 
 jobs:
   submit-score:
     runs-on: ubuntu-latest
     steps:
-      - name: Submit score
+      - name: Create Issue
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
@@ -21,5 +21,5 @@ jobs:
             https://api.github.com/repos/$GITHUB_REPOSITORY/issues \
             -d '{
               "title":"${{ github.event.client_payload.username }} - ${{ github.event.client_payload.score }}",
-              "body":"Quiz score submission"
+              "body":"Automated quiz submission"
             }'
