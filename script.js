@@ -34,18 +34,26 @@ const scoreElement = document.getElementById('score');
 const scoreMessage = document.getElementById('score-message');
 const submitButton = document.getElementById('submit-score');
 const submissionMessage = document.getElementById('submission-message');
+const usernameInput = document.getElementById('github-username');
 
 // Quiz State
 let currentQuestion = 0;
 let score = 0;
-let selectedOption = null;
 
-// Initialize the quiz
-function initQuiz() {
+// Initialize quiz
+document.addEventListener('DOMContentLoaded', () => {
     showQuestion();
-}
+    
+    // Enable Enter key submission
+    usernameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            submitScore();
+        }
+    });
+    
+    submitButton.addEventListener('click', submitScore);
+});
 
-// Display the current question
 function showQuestion() {
     if (currentQuestion >= QUESTIONS.length) {
         showResult();
@@ -62,39 +70,26 @@ function showQuestion() {
         </div>
     `;
 
-    // Add event listeners to options
     document.querySelectorAll('.option').forEach(option => {
-        option.addEventListener('click', selectOption);
+        option.addEventListener('click', (e) => {
+            document.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
+            e.target.classList.add('selected');
+            setTimeout(() => {
+                if (parseInt(e.target.dataset.index) === question.answer) {
+                    score++;
+                }
+                currentQuestion++;
+                showQuestion();
+            }, 300);
+        });
     });
 }
 
-// Handle option selection
-function selectOption(e) {
-    document.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
-    e.target.classList.add('selected');
-    selectedOption = parseInt(e.target.dataset.index);
-
-    setTimeout(() => {
-        checkAnswer();
-        currentQuestion++;
-        showQuestion();
-    }, 500);
-}
-
-// Check if the selected answer is correct
-function checkAnswer() {
-    if (selectedOption === QUESTIONS[currentQuestion].answer) {
-        score++;
-    }
-}
-
-// Show the quiz result
 function showResult() {
     quizContainer.classList.add('hidden');
     resultContainer.classList.remove('hidden');
     scoreElement.textContent = score;
-
-    // Custom message based on score
+    
     if (score === 5) {
         scoreMessage.textContent = "Perfect! You know Rohit extremely well! 🎉";
     } else if (score >= 3) {
@@ -104,22 +99,16 @@ function showResult() {
     }
 }
 
-// Validate GitHub username
-function isValidGitHubUsername(username) {
-    return /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i.test(username);
-}
-
-// Submit score to GitHub
-submitButton.addEventListener('click', async () => {
-    const username = document.getElementById('github-username').value.trim();
+async function submitScore() {
+    const username = usernameInput.value.trim();
     
     if (!username) {
-        showSubmissionError("Please enter your GitHub username");
+        showMessage("Please enter your GitHub username", "error");
         return;
     }
 
-    if (!isValidGitHubUsername(username)) {
-        showSubmissionError("Please enter a valid GitHub username");
+    if (!/^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i.test(username)) {
+        showMessage("Invalid GitHub username format", "error");
         return;
     }
 
@@ -127,30 +116,26 @@ submitButton.addEventListener('click', async () => {
         submitButton.disabled = true;
         submitButton.textContent = 'Submitting...';
         
-        // Using GitHub Actions workflow instead of direct API call
-        const response = await submitScoreViaActions(username, score);
-
+        const response = await triggerScoreSubmission(username, score);
+        
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Failed to submit score');
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || 'Submission failed');
         }
 
-        showSubmissionSuccess("Score submitted successfully! Redirecting to leaderboard...");
-        setTimeout(() => {
-            window.location.href = 'leaderboard.html';
-        }, 2000);
-
+        showMessage("Score submitted! Redirecting...", "success");
+        setTimeout(() => window.location.href = 'leaderboard.html', 1500);
+        
     } catch (error) {
-        console.error('Error submitting score:', error);
-        showSubmissionError(`Error: ${error.message}`);
+        console.error('Submission error:', error);
+        showMessage(`Error: ${error.message}`, "error");
     } finally {
         submitButton.disabled = false;
         submitButton.textContent = 'Submit Score';
     }
-});
+}
 
-// Submit via GitHub Actions workflow
-async function submitScoreViaActions(username, score) {
+async function triggerScoreSubmission(username, score) {
     return fetch(`https://api.github.com/repos/shaikrohit/guess-me/dispatches`, {
         method: 'POST',
         headers: {
@@ -159,26 +144,14 @@ async function submitScoreViaActions(username, score) {
         },
         body: JSON.stringify({
             event_type: 'submit_score',
-            client_payload: {
-                username: username,
-                score: score
-            }
+            client_payload: { username, score }
         })
     });
 }
 
-// Helper functions for submission messages
-function showSubmissionError(message) {
-    submissionMessage.textContent = message;
-    submissionMessage.className = "error";
+function showMessage(text, type) {
+    submissionMessage.textContent = text;
+    submissionMessage.className = type;
     submissionMessage.classList.remove('hidden');
+    setTimeout(() => submissionMessage.classList.add('hidden'), 3000);
 }
-
-function showSubmissionSuccess(message) {
-    submissionMessage.textContent = message;
-    submissionMessage.className = "success";
-    submissionMessage.classList.remove('hidden');
-}
-
-// Initialize the quiz when the page loads
-document.addEventListener('DOMContentLoaded', initQuiz);
