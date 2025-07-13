@@ -134,7 +134,7 @@ submitButton.addEventListener('click', async () => {
         // For GitHub Pages, consider using GitHub Actions or another secure method
         const token = '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'; // Replace with your token
         
-        if (token === 'YOUR_GITHUB_TOKEN_HERE') {
+        if (token === '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') {
             throw new Error("GitHub token not configured. Please set up your token.");
         }
 
