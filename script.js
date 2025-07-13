@@ -1,5 +1,5 @@
-// Quiz questions
-const questions = [
+// Quiz Configuration
+const QUESTIONS = [
     {
         question: "When was Rohit born?",
         options: ["July", "March", "December", "October"],
@@ -27,7 +27,7 @@ const questions = [
     }
 ];
 
-// DOM elements
+// DOM Elements
 const quizContainer = document.getElementById('quiz');
 const resultContainer = document.getElementById('result-container');
 const scoreElement = document.getElementById('score');
@@ -35,7 +35,7 @@ const scoreMessage = document.getElementById('score-message');
 const submitButton = document.getElementById('submit-score');
 const submissionMessage = document.getElementById('submission-message');
 
-// Quiz state
+// Quiz State
 let currentQuestion = 0;
 let score = 0;
 let selectedOption = null;
@@ -47,25 +47,19 @@ function initQuiz() {
 
 // Display the current question
 function showQuestion() {
-    if (currentQuestion >= questions.length) {
+    if (currentQuestion >= QUESTIONS.length) {
         showResult();
         return;
     }
 
-    const question = questions[currentQuestion];
-    let optionsHtml = '';
-
-    question.options.forEach((option, index) => {
-        optionsHtml += `
-            <div class="option" data-index="${index}">
-                ${option}
-            </div>
-        `;
-    });
-
+    const question = QUESTIONS[currentQuestion];
     quizContainer.innerHTML = `
         <div class="question">${question.question}</div>
-        <div class="options">${optionsHtml}</div>
+        <div class="options">
+            ${question.options.map((option, index) => `
+                <div class="option" data-index="${index}">${option}</div>
+            `).join('')}
+        </div>
     `;
 
     // Add event listeners to options
@@ -76,17 +70,10 @@ function showQuestion() {
 
 // Handle option selection
 function selectOption(e) {
-    // Remove selected class from all options
-    document.querySelectorAll('.option').forEach(option => {
-        option.classList.remove('selected');
-    });
+    document.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
+    e.target.classList.add('selected');
+    selectedOption = parseInt(e.target.dataset.index);
 
-    // Add selected class to clicked option
-    const selectedOptionElement = e.target;
-    selectedOptionElement.classList.add('selected');
-    selectedOption = parseInt(selectedOptionElement.dataset.index);
-
-    // Move to next question after a short delay
     setTimeout(() => {
         checkAnswer();
         currentQuestion++;
@@ -96,7 +83,7 @@ function selectOption(e) {
 
 // Check if the selected answer is correct
 function checkAnswer() {
-    if (selectedOption === questions[currentQuestion].answer) {
+    if (selectedOption === QUESTIONS[currentQuestion].answer) {
         score++;
     }
 }
@@ -117,60 +104,81 @@ function showResult() {
     }
 }
 
+// Validate GitHub username
+function isValidGitHubUsername(username) {
+    return /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i.test(username);
+}
+
 // Submit score to GitHub
 submitButton.addEventListener('click', async () => {
     const username = document.getElementById('github-username').value.trim();
     
     if (!username) {
-        submissionMessage.textContent = "Please enter your GitHub username";
-        submissionMessage.className = "error";
-        submissionMessage.classList.remove('hidden');
+        showSubmissionError("Please enter your GitHub username");
+        return;
+    }
+
+    if (!isValidGitHubUsername(username)) {
+        showSubmissionError("Please enter a valid GitHub username");
         return;
     }
 
     try {
-        // IMPORTANT: In a real deployment, this token should not be hardcoded
-        // For development, replace with your token or use environment variables
-        // For GitHub Pages, consider using GitHub Actions or another secure method
-        const token = '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'; // Replace with your token
+        submitButton.disabled = true;
+        submitButton.textContent = 'Submitting...';
         
-        if (token === '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') {
-            throw new Error("GitHub token not configured. Please set up your token.");
-        }
-
-        const response = await fetch('https://api.github.com/repos/shaikrohit/guess-me/issues', {
-            method: 'POST',
-            headers: {
-                'Authorization': `token ${token}`,
-                'Accept': 'application/vnd.github.v3+json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                title: `${username} - ${score}`,
-                body: `User ${username} scored ${score}/5 on the "How Well Do You Know Rohit?" quiz.`
-            })
-        });
+        // Using GitHub Actions workflow instead of direct API call
+        const response = await submitScoreViaActions(username, score);
 
         if (!response.ok) {
-            throw new Error('Failed to submit score');
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Failed to submit score');
         }
 
-        submissionMessage.textContent = "Score submitted successfully! Redirecting to leaderboard...";
-        submissionMessage.className = "success";
-        submissionMessage.classList.remove('hidden');
-
-        // Redirect to leaderboard after a short delay
+        showSubmissionSuccess("Score submitted successfully! Redirecting to leaderboard...");
         setTimeout(() => {
             window.location.href = 'leaderboard.html';
         }, 2000);
 
     } catch (error) {
         console.error('Error submitting score:', error);
-        submissionMessage.textContent = `Error: ${error.message}`;
-        submissionMessage.className = "error";
-        submissionMessage.classList.remove('hidden');
+        showSubmissionError(`Error: ${error.message}`);
+    } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Submit Score';
     }
 });
+
+// Submit via GitHub Actions workflow
+async function submitScoreViaActions(username, score) {
+    return fetch(`https://api.github.com/repos/shaikrohit/guess-me/dispatches`, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            event_type: 'submit_score',
+            client_payload: {
+                username: username,
+                score: score
+            }
+        })
+    });
+}
+
+// Helper functions for submission messages
+function showSubmissionError(message) {
+    submissionMessage.textContent = message;
+    submissionMessage.className = "error";
+    submissionMessage.classList.remove('hidden');
+}
+
+function showSubmissionSuccess(message) {
+    submissionMessage.textContent = message;
+    submissionMessage.className = "success";
+    submissionMessage.classList.remove('hidden');
+}
 
 // Initialize the quiz when the page loads
 document.addEventListener('DOMContentLoaded', initQuiz);
