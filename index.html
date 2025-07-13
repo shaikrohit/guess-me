@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Well Do You Know Rohit?</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>How Well Do You Know Rohit?</h1>
+            <p class="quote">"Coding is my cardio 💻💪"</p>
+            <p class="welcome">Welcome to my fun quiz! Think you know me? Let's find out!</p>
+        </header>
+
+        <div class="quiz-container">
+            <div id="quiz" class="quiz">
+                <!-- Questions will be inserted here by JavaScript -->
+            </div>
+        </div>
+
+        <div id="result-container" class="result-container hidden">
+            <h2>Your Score: <span id="score">0</span>/5</h2>
+            <div id="score-message"></div>
+            <div class="username-input">
+                <label for="github-username">Enter your GitHub username:</label>
+                <input type="text" id="github-username" placeholder="e.g., cooldev123">
+                <button id="submit-score">Submit Score</button>
+            </div>
+            <div id="submission-message" class="hidden"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
